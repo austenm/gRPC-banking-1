@@ -1,9 +1,10 @@
 import grpc
 import Branch_pb2
 import Branch_pb2_grpc
+from concurrent import futures
 
 
-class Branch(example_pb2_grpc.RPCServicer):
+class Branch(Branch_pb2_grpc.MsgDeliveryServicer):
 
     def __init__(self, id, balance, branches):
         # unique ID of the Branch
@@ -23,27 +24,25 @@ class Branch(example_pb2_grpc.RPCServicer):
 
     # TODO: students are expected to process requests from both Client and Branch
     def MsgDelivery(self, request, context):
-        pass
+        message = MsgDelivery.Request(request)
+        client_id = message.id
+        request_type = message.type
+
+    def deposit(self, amount):
+        newbalance = Branch.balance + amount
+        return newbalance
+
+    def withdraw(self, amount):
+        newbalance = Branch.balance - amount
+        return newbalance
+
+    def query(self):
+        return Branch.balance
 
 
-class MsgDeliveryServicer(object):
-    """Missing associated documentation comment in .proto file."""
-
-    def ClientRequest(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-
-def add_MsgDeliveryServicer_to_server(servicer, server):
-    rpc_method_handlers = {
-        'ClientRequest': grpc.unary_unary_rpc_method_handler(
-            servicer.ClientRequest,
-            request_deserializer=Branch__pb2.Request.FromString,
-            response_serializer=Branch__pb2.Response.SerializeToString,
-        ),
-    }
-    generic_handler = grpc.method_handlers_generic_handler(
-        'MsgDelivery', rpc_method_handlers)
-    server.add_generic_rpc_handlers((generic_handler,))
+def serve():
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    Branch_pb2_grpc.add_MsgDeliveryServicer_to_server(Branch(), server)
+    print('Starting server on port ')  # figure out which port
+    server.add_insecure_port()  # figure out how to define your port here
+    server.start()

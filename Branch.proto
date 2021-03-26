@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 service MsgDelivery {
-    rpc ClientRequest(Request) returns (Response);
+    rpc Transaction(Request) returns (Response);
 }
 
 message Request {
@@ -26,3 +26,7 @@ message recv {
     string result = 2;
     int32 money = 3;
 }
+
+// To generate code from .proto:
+// python3 -m grpc_tools.protoc -I=/Users/austenmack/cse531-P1-gRPC —python_out=. 
+// —grpc_python_out=. /Users/austenmack/cse531-P1-gRPC/Branch.proto

@@ -14,17 +14,17 @@ class MsgDeliveryStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.ClientRequest = channel.unary_unary(
-            '/MsgDelivery/ClientRequest',
-            request_serializer=Branch__pb2.Request.SerializeToString,
-            response_deserializer=Branch__pb2.Response.FromString,
-        )
+        self.Transaction = channel.unary_unary(
+                '/MsgDelivery/Transaction',
+                request_serializer=Branch__pb2.Request.SerializeToString,
+                response_deserializer=Branch__pb2.Response.FromString,
+                )
 
 
 class MsgDeliveryServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def ClientRequest(self, request, context):
+    def Transaction(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -33,35 +33,34 @@ class MsgDeliveryServicer(object):
 
 def add_MsgDeliveryServicer_to_server(servicer, server):
     rpc_method_handlers = {
-        'ClientRequest': grpc.unary_unary_rpc_method_handler(
-            servicer.ClientRequest,
-            request_deserializer=Branch__pb2.Request.FromString,
-            response_serializer=Branch__pb2.Response.SerializeToString,
-        ),
+            'Transaction': grpc.unary_unary_rpc_method_handler(
+                    servicer.Transaction,
+                    request_deserializer=Branch__pb2.Request.FromString,
+                    response_serializer=Branch__pb2.Response.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-        'MsgDelivery', rpc_method_handlers)
+            'MsgDelivery', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
+
  # This class is part of an EXPERIMENTAL API.
-
-
 class MsgDelivery(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def ClientRequest(request,
-                      target,
-                      options=(),
-                      channel_credentials=None,
-                      call_credentials=None,
-                      insecure=False,
-                      compression=None,
-                      wait_for_ready=None,
-                      timeout=None,
-                      metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/MsgDelivery/ClientRequest',
-                                             Branch__pb2.Request.SerializeToString,
-                                             Branch__pb2.Response.FromString,
-                                             options, channel_credentials,
-                                             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+    def Transaction(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/MsgDelivery/Transaction',
+            Branch__pb2.Request.SerializeToString,
+            Branch__pb2.Response.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

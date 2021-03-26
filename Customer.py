@@ -5,9 +5,14 @@ import time
 import sys
 import json
 
+# main can be a loop that parses JSON input, assigns a PID to each Customer process and calls
+# RPC Serve() which will have to be implemented. Here the server can send back the metadata
+# as it responds that it is listening. Then the Customer process can connect using the stub
+# and pass the events to the server using executeEvents. The Customer will write the returned
+# response to a file.
 
-with open(sys.argv[1], 'r') as input_file:
-    data = json.loads(input_file)
+# Still need to think through propogate method that MsgDelivery can route to. Also need to
+# think about the Branch type input messages.
 
 
 class Customer:
@@ -23,25 +28,44 @@ class Customer:
 
     # TODO: students are expected to create the Customer stub
 
-    def createStub(self):
-        pass
+    def createStub(self, Customer):
+        channel = grpc.insecure_channel(
+            'localhost:{}'.format(5000 + Customer.id))
+        stub = Branch_pb2_grpc.MsgDeliveryStub(channel)
 
     # TODO: students are expected to send out the events to the Bank
-    def executeEvents(self):
+    def executeEvents(self, Customer):
         pass
 
+    def printCustomerInfo(self):
+        print(self.id)
+        print(self.events)
 
-class MsgDeliveryStub(object):
-    """Missing associated documentation comment in .proto file."""
 
-    def __init__(self, channel):
-        """Constructor.
+def main():
+    with open(sys.argv[1]) as f:
+        invalid_json = f.read()
 
-        Args:
-            channel: A grpc.Channel.
-        """
-        self.ClientRequest = channel.unary_unary(
-            '/MsgDelivery/ClientRequest',
-            request_serializer=Branch__pb2.Request.SerializeToString,
-            response_deserializer=Branch__pb2.Response.FromString,
-        )
+    mid_json = invalid_json.replace(
+        'type', 'rtype').replace('“', '"').replace('”', '"')
+    valid_json = json.loads(mid_json)
+
+    for request in valid_json:
+        for attribute, value in request.items():
+            if value == "customer":
+                C1 = Customer(request['id'], request['events'])
+                C1.printCustomerInfo()
+
+
+if __name__ == "__main__":
+    main()
+
+
+# prints both events from this object
+# print(valid_json[1]['events'])
+
+# prints the entire first event field of the first object
+# print(valid_json[0]['events'][0])
+
+# prints just the interface type (query in this example)
+# print(valid_json[0]['events'][0]['interface'])
