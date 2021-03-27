@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x0c\x42ranch.proto\":\n\x07Request\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x15\n\x05\x65vent\x18\x03 \x03(\x0b\x32\x06.event\"5\n\x05\x65vent\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x11\n\tinterface\x18\x02 \x01(\t\x12\r\n\x05money\x18\x03 \x01(\x05\"+\n\x08Response\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x13\n\x04recv\x18\x02 \x03(\x0b\x32\x05.recv\"8\n\x04recv\x12\x11\n\tinterface\x18\x01 \x01(\t\x12\x0e\n\x06result\x18\x02 \x01(\t\x12\r\n\x05money\x18\x03 \x01(\x05\x32\x31\n\x0bMsgDelivery\x12\"\n\x0bTransaction\x12\x08.Request\x1a\t.Responseb\x06proto3'
+  serialized_pb=b'\n\x0c\x42ranch.proto\":\n\x07Request\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x15\n\x05\x65vent\x18\x03 \x03(\x0b\x32\x06.event\"5\n\x05\x65vent\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x11\n\tinterface\x18\x02 \x01(\t\x12\r\n\x05money\x18\x03 \x01(\x05\"+\n\x08Response\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x13\n\x04recv\x18\x02 \x03(\x0b\x32\x05.recv\"8\n\x04recv\x12\x11\n\tinterface\x18\x01 \x01(\t\x12\x0e\n\x06result\x18\x02 \x01(\t\x12\r\n\x05money\x18\x03 \x01(\x05\x32,\n\x06\x42ranch\x12\"\n\x0bMsgDelivery\x12\x08.Request\x1a\t.Responseb\x06proto3'
 )
 
 
@@ -239,19 +239,19 @@ _sym_db.RegisterMessage(recv)
 
 
 
-_MSGDELIVERY = _descriptor.ServiceDescriptor(
-  name='MsgDelivery',
-  full_name='MsgDelivery',
+_BRANCH = _descriptor.ServiceDescriptor(
+  name='Branch',
+  full_name='Branch',
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
   serialized_start=234,
-  serialized_end=283,
+  serialized_end=278,
   methods=[
   _descriptor.MethodDescriptor(
-    name='Transaction',
-    full_name='MsgDelivery.Transaction',
+    name='MsgDelivery',
+    full_name='Branch.MsgDelivery',
     index=0,
     containing_service=None,
     input_type=_REQUEST,
@@ -260,8 +260,8 @@ _MSGDELIVERY = _descriptor.ServiceDescriptor(
     create_key=_descriptor._internal_create_key,
   ),
 ])
-_sym_db.RegisterServiceDescriptor(_MSGDELIVERY)
+_sym_db.RegisterServiceDescriptor(_BRANCH)
 
-DESCRIPTOR.services_by_name['MsgDelivery'] = _MSGDELIVERY
+DESCRIPTOR.services_by_name['Branch'] = _BRANCH
 
 # @@protoc_insertion_point(module_scope)

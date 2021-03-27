@@ -1,7 +1,7 @@
 syntax = "proto3";
 
-service MsgDelivery {
-    rpc Transaction(Request) returns (Response);
+service Branch {
+    rpc MsgDelivery(Request) returns (Response);
 }
 
 message Request {

@@ -22,27 +22,56 @@ class Branch(Branch_pb2_grpc.MsgDeliveryServicer):
         # TODO: students are expected to store the processID of the branches
         pass
 
-    # TODO: students are expected to process requests from both Client and Branch
-    def MsgDelivery(self, request, context):
-        message = MsgDelivery.Request(request)
-        client_id = message.id
-        request_type = message.type
-
     def deposit(self, amount):
-        newbalance = Branch.balance + amount
+        newbalance = self.balance + amount
         return newbalance
 
     def withdraw(self, amount):
-        newbalance = Branch.balance - amount
+        newbalance = self.balance - amount
         return newbalance
 
-    def query(self):
-        return Branch.balance
+    # def query(self):
+    #    return self.balance
+
+    # TODO: students are expected to process requests from both Client and Branch
+    def MsgDelivery(self, request, context):
+        for r in request:
+            requester = r['type']
+            if requester == 'customer':
+                events = r['events']
+                for event in events:
+                    amount = event['money']
+                    print(amount)
+                    if event['interface'] == 'deposit':
+                        self.balance = self.deposit(amount)
+                    elif event['interface'] == 'withdraw':
+                        self.balance = self.withdraw(amount)
+                    else:
+                        print('Good grief Charlie Brown.. just.. good GRIEF')
+                    break
+            elif requester == 'branch':
+                print('This request type is: {}'.format(r['type']))
+                print(r['balance'])
 
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    Branch_pb2_grpc.add_MsgDeliveryServicer_to_server(Branch(), server)
+    Branch_pb2_grpc.add_MsgDeliveryServicer_to_server(
+        Branch(), server)
     print('Starting server on port ')  # figure out which port
     server.add_insecure_port()  # figure out how to define your port here
     server.start()
+
+
+def main():
+    B = Branch(1, 400, 1)
+    print('{0}, {1}, {2}'.format(B.id, B.balance, B.branches))
+    request = [{'id': 1, 'type': 'customer', 'events': [
+        {'id': 3, 'interface': 'query', 'money': 200}, {'id': 4, 'interface': 'deposit', 'money': 69000}]}, {'id': 1, 'type': 'branch', 'balance': 400}]
+    context = 'whatever this is'
+    B.MsgDelivery(request, context)
+    print('{0}, {1}, {2}'.format(B.id, B.balance, B.branches))
+
+
+if __name__ == "__main__":
+    main()
