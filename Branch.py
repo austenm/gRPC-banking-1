@@ -2,9 +2,13 @@ import grpc
 import Branch_pb2
 import Branch_pb2_grpc
 from concurrent import futures
+import sys
+import json
+import time
+import multiprocessing
 
 
-class Branch(Branch_pb2_grpc.MsgDeliveryServicer):
+class Branch(Branch_pb2_grpc.BranchServicer):
 
     def __init__(self, id, balance, branches):
         # unique ID of the Branch
@@ -14,6 +18,9 @@ class Branch(Branch_pb2_grpc.MsgDeliveryServicer):
         # the list of process IDs of the branches
         self.branches = branches
         # the list of Client stubs to communicate with the branches
+        # use list of branch ids to generate stub for each entry in list
+        # propogate will iterate over stublist and call MsgDelivery
+        # use createStub code to add stubs to this list
         self.stubList = list()
         # a list of received messages used for debugging purpose
         self.recvMsg = list()
@@ -30,48 +37,58 @@ class Branch(Branch_pb2_grpc.MsgDeliveryServicer):
         newbalance = self.balance - amount
         return newbalance
 
-    # def query(self):
-    #    return self.balance
+    def prop_wd(self, amount):
+        # implement this
+        pass
+
+    def prop_dp(self, amount):
+        # implement this
+        pass
 
     # TODO: students are expected to process requests from both Client and Branch
+    # Refactor to use requests sent from Customer, not input file
     def MsgDelivery(self, request, context):
-        for r in request:
-            requester = r['type']
-            if requester == 'customer':
-                events = r['events']
-                for event in events:
-                    amount = event['money']
-                    print(amount)
-                    if event['interface'] == 'deposit':
-                        self.balance = self.deposit(amount)
-                    elif event['interface'] == 'withdraw':
-                        self.balance = self.withdraw(amount)
-                    else:
-                        print('Good grief Charlie Brown.. just.. good GRIEF')
-                    break
-            elif requester == 'branch':
-                print('This request type is: {}'.format(r['type']))
-                print(r['balance'])
+        amount = request.money
+        if request.eventiface == 'deposit':
+            self.balance = self.deposit(amount)
+            return Branch_pb2.Response(id=request.id, interface="deposit", result="success")
+        elif request.eventiface == 'withdraw':
+            self.balance = self.withdraw(amount)
+            return Branch_pb2.Response(id=request.id, interface="withdraw", result="success")
+        else:
+            return Branch_pb2.Response(id=request.id, interface="query", result="success", money=self.balance)
 
 
-def serve():
+def serve(port, bid, balance, branches):
+    B = Branch(bid, balance, branches)
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    Branch_pb2_grpc.add_MsgDeliveryServicer_to_server(
-        Branch(), server)
-    print('Starting server on port ')  # figure out which port
-    server.add_insecure_port()  # figure out how to define your port here
+    Branch_pb2_grpc.add_BranchServicer_to_server(B, server)
+    server.add_insecure_port('localhost:{}'.format(port))
     server.start()
-
-
-def main():
-    B = Branch(1, 400, 1)
-    print('{0}, {1}, {2}'.format(B.id, B.balance, B.branches))
-    request = [{'id': 1, 'type': 'customer', 'events': [
-        {'id': 3, 'interface': 'query', 'money': 200}, {'id': 4, 'interface': 'deposit', 'money': 69000}]}, {'id': 1, 'type': 'branch', 'balance': 400}]
-    context = 'whatever this is'
-    B.MsgDelivery(request, context)
-    print('{0}, {1}, {2}'.format(B.id, B.balance, B.branches))
+    print('Server listening at localhost:{}'.format(port))
+    server.wait_for_termination()
 
 
 if __name__ == "__main__":
-    main()
+    with open(sys.argv[1]) as f:
+        invalid_json = f.read()
+
+    mid_json = invalid_json.replace('“', '"').replace('”', '"')
+    valid_json = json.loads(mid_json)
+
+    branches = []
+    for request in valid_json:
+        for attribute, value in request.items():
+            if value == "branch":
+                branches.append(request['id'])
+
+    workers = []
+    for request in valid_json:
+        for attribute, value in request.items():
+            if value == "branch":
+                bid, balance, branchlist = request['id'], request['balance'], branches
+                port = 50050 + request['id']
+                worker = multiprocessing.Process(
+                    target=serve, args=(port, bid, balance, branchlist))
+                workers.append(worker)
+                worker.start()

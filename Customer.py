@@ -5,15 +5,8 @@ import time
 import sys
 import json
 import time
-
-# main can be a loop that parses JSON input, assigns a PID to each Customer process and calls
-# RPC Serve() which will have to be implemented. Here the server can send back the metadata
-# as it responds that it is listening. Then the Customer process can connect using the stub
-# and pass the events to the server using executeEvents. The Customer will write the returned
-# response to a file.
-
-# Still need to think through propogate method that MsgDelivery can route to. Also need to
-# think about the Branch type input messages.
+import multiprocessing
+from google.protobuf.json_format import MessageToDict
 
 
 class Customer:
@@ -27,41 +20,53 @@ class Customer:
         # pointer for the stub
         self.stub = None
 
-    # TODO: students are expected to create the Customer stub
 
-    def createStub(self):
-        server_port = 50050 + self.id
-        print('The port number for Customer {0} is {1}'.format(
-            self.id, server_port))
-        # channel = grpc.insecure_channel(
-        #    'localhost:{}'.format(server_port))
-        #self.stub = Branch_pb2_grpc.BranchStub(channel)
-
-    # TODO: students are expected to send out the events to the Bank
-    def executeEvents(self):
-        request = Branch_pb2.Request(
-            id=self.id, type='customer', event=self.events)
-        print(request)
-        #response = Branch_pb2.MsgDelivery(request)
-        # print(response)
-        print('-' * 30)
+def createStub(port, cid, events):
+    C = Customer(cid, events)
+    channel = grpc.insecure_channel(
+        'localhost:{}'.format(port))
+    stub = Branch_pb2_grpc.BranchStub(channel)
+    C.stub = stub
+    executeEvents(C)
 
 
-def main():
-    with open(sys.argv[1]) as f:
-        invalid_json = f.read()
+def executeEvents(cust_obj):
+    eventid, eventiface, money = cust_obj.events['id'], cust_obj.events['interface'], cust_obj.events['money']
+    request = Branch_pb2.Request(
+        id=cust_obj.id, type='customer', eventid=eventid, eventiface=eventiface, money=money)
+    response = cust_obj.stub.MsgDelivery(request)
+    result = MessageToDict(response)
+    output(result)
+    print('Customer {0} response: {1}'.format(cust_obj.id, result))
+    print('-' * 50)
 
-    mid_json = invalid_json.replace('“', '"').replace('”', '"')
-    valid_json = json.loads(mid_json)
 
-    for request in valid_json:
-        for attribute, value in request.items():
-            if value == "customer":
-                C = Customer(request['id'], request['events'])
-                C.createStub()
-                C.executeEvents()
-                time.sleep(1)
+def output(result):
+    responses = []
+    responses.append(result)
+    print('Hi, Output function here! The results are:\n')
+    print(responses)
 
 
 if __name__ == "__main__":
-    main()
+    with open(sys.argv[1]) as f:
+        invalid_json = f.read()
+    mid_json = invalid_json.replace('“', '"').replace('”', '"')
+    valid_json = json.loads(mid_json)
+
+    workers = []
+    for request in valid_json:
+        for attribute, value in request.items():
+            if value == "customer":
+                elist = request['events']
+                for event in elist:
+                    if event['interface'] == 'query':
+                        time.sleep(3)
+                    cid, events = request['id'], event
+                    port = 50050 + cid
+                    worker = multiprocessing.Process(
+                        target=createStub, args=(port, cid, events))
+                    workers.append(worker)
+                    worker.start()
+                for i in workers:
+                    worker.join()

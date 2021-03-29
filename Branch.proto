@@ -7,24 +7,16 @@ service Branch {
 message Request {
     int32 id = 1;
     string type = 2;
-    repeated event event = 3;
-}
-
-message event {
-    int32 id = 1;
-    string interface = 2;
-    int32 money = 3;
+    int32 eventid = 3;
+    string eventiface = 4;
+    int32 money = 5;
 }
 
 message Response {
     int32 id = 1;
-    repeated recv recv = 2;
-}
-
-message recv {
-    string interface = 1;
-    string result = 2;
-    int32 money = 3;
+    string interface = 2;
+    string result = 3;
+    int32 money = 4;
 }
 
 // To generate code from .proto:
