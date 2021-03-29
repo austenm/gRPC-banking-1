@@ -60,13 +60,9 @@ if __name__ == "__main__":
             if value == "customer":
                 elist = request['events']
                 for event in elist:
-                    if event['interface'] == 'query':
-                        time.sleep(3)
                     cid, events = request['id'], event
                     port = 50050 + cid
                     worker = multiprocessing.Process(
                         target=createStub, args=(port, cid, events))
                     workers.append(worker)
                     worker.start()
-                for i in workers:
-                    worker.join()
