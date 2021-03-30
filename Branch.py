@@ -58,7 +58,7 @@ class Branch(Branch_pb2_grpc.BranchServicer):
             self.balance = self.withdraw(amount)
             return Branch_pb2.Response(id=request.id, interface="withdraw", result="success")
         else:
-            time.sleep(3)
+            # time.sleep(3)
             return Branch_pb2.Response(id=request.id, interface="query", result="success", money=self.balance)
 
 

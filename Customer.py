@@ -21,31 +21,44 @@ class Customer:
         self.stub = None
 
 
-def createStub(port, cid, events):
+def createStub(port, cid, events, q):
     C = Customer(cid, events)
     channel = grpc.insecure_channel(
         'localhost:{}'.format(port))
     stub = Branch_pb2_grpc.BranchStub(channel)
     C.stub = stub
-    executeEvents(C)
+    executeEvents(C, q)
 
 
-def executeEvents(cust_obj):
+def executeEvents(cust_obj, q):
     eventid, eventiface, money = cust_obj.events['id'], cust_obj.events['interface'], cust_obj.events['money']
     request = Branch_pb2.Request(
         id=cust_obj.id, type='customer', eventid=eventid, eventiface=eventiface, money=money)
     response = cust_obj.stub.MsgDelivery(request)
     result = MessageToDict(response)
-    output(result)
-    print('Customer {0} response: {1}'.format(cust_obj.id, result))
-    print('-' * 50)
+    q.put(result)
+    # print('Customer {0} response: {1}'.format(cust_obj.id, result))
+    # print('-' * 50)
 
 
-def output(result):
-    responses = []
-    responses.append(result)
-    print('Hi, Output function here! The results are:\n')
-    print(responses)
+def output(q):
+    clipboard = []
+    wanted_keys = ['interface', 'result', 'money']
+    output_buf = []
+    while not q.empty():
+        clipboard.append(q.get())
+
+    for k in range(11):
+        newdict = {'id': k, 'recv': []}
+        for i in clipboard:
+            if i['id'] == k:
+                clipdict = dict((key, i[key])
+                                for key in wanted_keys if key in i)
+                newdict['recv'].append(clipdict)
+        if len(newdict['recv']):
+            f = open("output.txt", "a")
+            f.write('{}\n'.format(newdict))
+            f.close()
 
 
 if __name__ == "__main__":
@@ -54,6 +67,7 @@ if __name__ == "__main__":
     mid_json = invalid_json.replace('“', '"').replace('”', '"')
     valid_json = json.loads(mid_json)
 
+    q = multiprocessing.Queue()
     workers = []
     for request in valid_json:
         for attribute, value in request.items():
@@ -63,6 +77,12 @@ if __name__ == "__main__":
                     cid, events = request['id'], event
                     port = 50050 + cid
                     worker = multiprocessing.Process(
-                        target=createStub, args=(port, cid, events))
+                        target=createStub, args=(port, cid, events, q))
                     workers.append(worker)
                     worker.start()
+                for worker in workers:
+                    worker.join()
+
+    output(q)
+    # while not q.empty():
+    #     print('Contents of the Queue: {}'.format(q.get()))
