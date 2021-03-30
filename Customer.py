@@ -20,35 +20,39 @@ class Customer:
         # pointer for the stub
         self.stub = None
 
+    def executeEvents(self, q):
+        eventid, eventiface, money = self.events['id'], self.events['interface'], self.events['money']
+        if eventiface == 'query':
+            time.sleep(3)
+        elif eventiface == 'withdraw':
+            time.sleep(.5)
+        request = Branch_pb2.Request(
+            id=self.id, type='customer', eventid=eventid, eventiface=eventiface, money=money)
+        response = self.stub.MsgDelivery(request)
+        result = MessageToDict(response)
+        q.put(result)
 
-def createStub(port, cid, events, q):
+    def createStub(self, port, q):
+        channel = grpc.insecure_channel(
+            'localhost:{}'.format(port))
+        stub = Branch_pb2_grpc.BranchStub(channel)
+        self.stub = stub
+        self.executeEvents(q)
+
+
+def create_customer(port, cid, events, q):
     C = Customer(cid, events)
-    channel = grpc.insecure_channel(
-        'localhost:{}'.format(port))
-    stub = Branch_pb2_grpc.BranchStub(channel)
-    C.stub = stub
-    executeEvents(C, q)
-
-
-def executeEvents(cust_obj, q):
-    eventid, eventiface, money = cust_obj.events['id'], cust_obj.events['interface'], cust_obj.events['money']
-    request = Branch_pb2.Request(
-        id=cust_obj.id, type='customer', eventid=eventid, eventiface=eventiface, money=money)
-    response = cust_obj.stub.MsgDelivery(request)
-    result = MessageToDict(response)
-    q.put(result)
-    # print('Customer {0} response: {1}'.format(cust_obj.id, result))
-    # print('-' * 50)
+    C.createStub(port, q)
 
 
 def output(q):
     clipboard = []
     wanted_keys = ['interface', 'result', 'money']
-    output_buf = []
+
     while not q.empty():
         clipboard.append(q.get())
 
-    for k in range(11):
+    for k in range(1, len(clipboard)):
         newdict = {'id': k, 'recv': []}
         for i in clipboard:
             if i['id'] == k:
@@ -77,12 +81,10 @@ if __name__ == "__main__":
                     cid, events = request['id'], event
                     port = 50050 + cid
                     worker = multiprocessing.Process(
-                        target=createStub, args=(port, cid, events, q))
+                        target=create_customer, args=(port, cid, events, q))
                     workers.append(worker)
                     worker.start()
-                for worker in workers:
-                    worker.join()
+    for worker in workers:
+        worker.join()
 
     output(q)
-    # while not q.empty():
-    #     print('Contents of the Queue: {}'.format(q.get()))

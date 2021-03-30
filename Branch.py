@@ -18,47 +18,58 @@ class Branch(Branch_pb2_grpc.BranchServicer):
         # the list of process IDs of the branches
         self.branches = branches
         # the list of Client stubs to communicate with the branches
-        # use list of branch ids to generate stub for each entry in list
-        # propogate will iterate over stublist and call MsgDelivery
-        # use createStub code to add stubs to this list
         self.stubList = list()
         # a list of received messages used for debugging purpose
         self.recvMsg = list()
         # iterate the processID of the branches
 
-        # TODO: students are expected to store the processID of the branches
-        pass
-
-    def deposit(self, amount):
-        newbalance = self.balance + amount
-        # prop_dp(amount)
-        return newbalance
-
-    def withdraw(self, amount):
-        newbalance = self.balance - amount
-        # prop_wd(amount)
-        return newbalance
-
     def prop_dp(self, amount):
-        # loop through branches, run withdraw on all processes whose
-        # id != self.id
-        pass
+        for i in self.branches:
+            if i != self.id:
+                port = 50050 + i
+                channel = grpc.insecure_channel(
+                    'localhost:{}'.format(port))
+                stub = Branch_pb2_grpc.BranchStub(channel)
+                request = Branch_pb2.Request(
+                    id=i, type='branch', eventid=0, eventiface="deposit", money=amount)
+                response = stub.MsgDelivery(request)
+                print('Now propogating.. Response: {}'.format(response))
 
     def prop_wd(self, amount):
-        # loop through branches, run withdraw on all processes whose
-        # id != self.id
-        pass
+        for i in self.branches:
+            if i != self.id:
+                port = 50050 + i
+                channel = grpc.insecure_channel(
+                    'localhost:{}'.format(port))
+                stub = Branch_pb2_grpc.BranchStub(channel)
+                request = Branch_pb2.Request(
+                    id=i, type='branch', eventid=0, eventiface="withdraw", money=amount)
+                response = stub.MsgDelivery(request)
+                print('Now propogating.. Response: {}'.format(response))
+
+    def deposit(self, amount, rtype):
+        newbalance = self.balance + amount
+        if rtype == 'customer':
+            self.prop_dp(amount)
+        return newbalance
+
+    def withdraw(self, amount, rtype):
+        newbalance = self.balance - amount
+        if rtype == 'customer':
+            self.prop_wd(amount)
+        return newbalance
 
     def MsgDelivery(self, request, context):
         amount = request.money
+        rtype = request.type
         if request.eventiface == 'deposit':
-            self.balance = self.deposit(amount)
+            self.balance = self.deposit(amount, rtype)
             return Branch_pb2.Response(id=request.id, interface="deposit", result="success")
         elif request.eventiface == 'withdraw':
-            self.balance = self.withdraw(amount)
+            self.balance = self.withdraw(amount, rtype)
             return Branch_pb2.Response(id=request.id, interface="withdraw", result="success")
         else:
-            # time.sleep(3)
+            print('We got a query goin down, yall! ID: {}'.format(request.id))
             return Branch_pb2.Response(id=request.id, interface="query", result="success", money=self.balance)
 
 
