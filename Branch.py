@@ -33,7 +33,7 @@ class Branch(Branch_pb2_grpc.BranchServicer):
                 request = Branch_pb2.Request(
                     id=i, type='branch', eventid=0, eventiface="deposit", money=amount)
                 response = stub.MsgDelivery(request)
-                print('Now propogating.. Response: {}'.format(response))
+                # print('Now propogating.. Response: {}'.format(response))
 
     def prop_wd(self, amount):
         for i in self.branches:
@@ -45,7 +45,7 @@ class Branch(Branch_pb2_grpc.BranchServicer):
                 request = Branch_pb2.Request(
                     id=i, type='branch', eventid=0, eventiface="withdraw", money=amount)
                 response = stub.MsgDelivery(request)
-                print('Now propogating.. Response: {}'.format(response))
+                # print('Now propogating.. Response: {}'.format(response))
 
     def deposit(self, amount, rtype):
         newbalance = self.balance + amount
@@ -69,7 +69,7 @@ class Branch(Branch_pb2_grpc.BranchServicer):
             self.balance = self.withdraw(amount, rtype)
             return Branch_pb2.Response(id=request.id, interface="withdraw", result="success")
         else:
-            print('We got a query goin down, yall! ID: {}'.format(request.id))
+            # print('We got a query goin down, yall! ID: {}'.format(request.id))
             return Branch_pb2.Response(id=request.id, interface="query", result="success", money=self.balance)
 
 
@@ -79,29 +79,5 @@ def serve(port, bid, balance, branches):
     Branch_pb2_grpc.add_BranchServicer_to_server(B, server)
     server.add_insecure_port('localhost:{}'.format(port))
     server.start()
-    print('Server listening at localhost:{}'.format(port))
-    server.wait_for_termination()
-
-
-if __name__ == "__main__":
-    with open(sys.argv[1]) as f:
-        invalid_json = f.read()
-    mid_json = invalid_json.replace('“', '"').replace('”', '"')
-    valid_json = json.loads(mid_json)
-
-    branches = []
-    for request in valid_json:
-        for attribute, value in request.items():
-            if value == "branch":
-                branches.append(request['id'])
-
-    workers = []
-    for request in valid_json:
-        for attribute, value in request.items():
-            if value == "branch":
-                bid, balance, branchlist = request['id'], request['balance'], branches
-                port = 50050 + bid
-                worker = multiprocessing.Process(
-                    target=serve, args=(port, bid, balance, branchlist))
-                workers.append(worker)
-                worker.start()
+    # print('Server listening at localhost:{}'.format(port))
+    server.wait_for_termination(timeout=10)

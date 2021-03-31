@@ -7,6 +7,7 @@ import json
 import time
 import multiprocessing
 from google.protobuf.json_format import MessageToDict
+import Branch
 
 
 class Customer:
@@ -25,7 +26,7 @@ class Customer:
         if eventiface == 'query':
             time.sleep(3)
         elif eventiface == 'withdraw':
-            time.sleep(.5)
+            time.sleep(1)
         request = Branch_pb2.Request(
             id=self.id, type='customer', eventid=eventid, eventiface=eventiface, money=money)
         response = self.stub.MsgDelivery(request)
@@ -71,6 +72,22 @@ if __name__ == "__main__":
     mid_json = invalid_json.replace('“', '"').replace('”', '"')
     valid_json = json.loads(mid_json)
 
+    branches = []
+    for request in valid_json:
+        for attribute, value in request.items():
+            if value == "branch":
+                branches.append(request['id'])
+
+    for request in valid_json:
+        for attribute, value in request.items():
+            if value == "branch":
+                bid, balance, branchlist = request['id'], request['balance'], branches
+                port = 50050 + bid
+                worker = multiprocessing.Process(
+                    target=Branch.serve, args=(port, bid, balance, branchlist))
+                worker.start()
+
+    time.sleep(.25)
     q = multiprocessing.Queue()
     workers = []
     for request in valid_json:
