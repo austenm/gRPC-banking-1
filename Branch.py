@@ -23,6 +23,32 @@ class Branch(Branch_pb2_grpc.BranchServicer):
         self.recvMsg = list()
         # iterate the processID of the branches
 
+    def MsgDelivery(self, request, context):
+        amount = request.money
+        rtype = request.type
+        if request.eventiface == 'deposit':
+            self.balance = self.deposit(amount, rtype)
+            return Branch_pb2.Response(id=request.id, interface="deposit", result="success")
+        elif request.eventiface == 'withdraw':
+            self.balance = self.withdraw(amount, rtype)
+            return Branch_pb2.Response(id=request.id, interface="withdraw", result="success")
+        else:
+            return Branch_pb2.Response(id=request.id, interface="query", result="success", money=self.balance)
+
+    def deposit(self, amount, rtype):
+        newbalance = self.balance + amount
+        # only propagate if first request - type will be customer
+        if rtype == 'customer':
+            self.prop_dp(amount)
+        return newbalance
+
+    def withdraw(self, amount, rtype):
+        newbalance = self.balance - amount
+        # only propagate if first request - type will be customer
+        if rtype == 'customer':
+            self.prop_wd(amount)
+        return newbalance
+
     def prop_dp(self, amount):
         for i in self.branches:
             if i != self.id:
@@ -33,7 +59,6 @@ class Branch(Branch_pb2_grpc.BranchServicer):
                 request = Branch_pb2.Request(
                     id=i, type='branch', eventid=0, eventiface="deposit", money=amount)
                 response = stub.MsgDelivery(request)
-                # print('Now propogating.. Response: {}'.format(response))
 
     def prop_wd(self, amount):
         for i in self.branches:
@@ -45,32 +70,6 @@ class Branch(Branch_pb2_grpc.BranchServicer):
                 request = Branch_pb2.Request(
                     id=i, type='branch', eventid=0, eventiface="withdraw", money=amount)
                 response = stub.MsgDelivery(request)
-                # print('Now propogating.. Response: {}'.format(response))
-
-    def deposit(self, amount, rtype):
-        newbalance = self.balance + amount
-        if rtype == 'customer':
-            self.prop_dp(amount)
-        return newbalance
-
-    def withdraw(self, amount, rtype):
-        newbalance = self.balance - amount
-        if rtype == 'customer':
-            self.prop_wd(amount)
-        return newbalance
-
-    def MsgDelivery(self, request, context):
-        amount = request.money
-        rtype = request.type
-        if request.eventiface == 'deposit':
-            self.balance = self.deposit(amount, rtype)
-            return Branch_pb2.Response(id=request.id, interface="deposit", result="success")
-        elif request.eventiface == 'withdraw':
-            self.balance = self.withdraw(amount, rtype)
-            return Branch_pb2.Response(id=request.id, interface="withdraw", result="success")
-        else:
-            # print('We got a query goin down, yall! ID: {}'.format(request.id))
-            return Branch_pb2.Response(id=request.id, interface="query", result="success", money=self.balance)
 
 
 def serve(port, bid, balance, branches):
@@ -79,5 +78,4 @@ def serve(port, bid, balance, branches):
     Branch_pb2_grpc.add_BranchServicer_to_server(B, server)
     server.add_insecure_port('localhost:{}'.format(port))
     server.start()
-    # print('Server listening at localhost:{}'.format(port))
     server.wait_for_termination(timeout=10)

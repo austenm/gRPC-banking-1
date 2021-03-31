@@ -4,7 +4,6 @@ import Branch_pb2_grpc
 import time
 import sys
 import json
-import time
 import multiprocessing
 from google.protobuf.json_format import MessageToDict
 import Branch
@@ -21,6 +20,14 @@ class Customer:
         # pointer for the stub
         self.stub = None
 
+    def createStub(self, port, q):
+        channel = grpc.insecure_channel(
+            'localhost:{}'.format(port))
+        stub = Branch_pb2_grpc.BranchStub(channel)
+        self.stub = stub
+        self.executeEvents(q)
+
+    # stagger events to avoid race condition, place result in queue
     def executeEvents(self, q):
         eventid, eventiface, money = self.events['id'], self.events['interface'], self.events['money']
         if eventiface == 'query':
@@ -32,13 +39,6 @@ class Customer:
         response = self.stub.MsgDelivery(request)
         result = MessageToDict(response)
         q.put(result)
-
-    def createStub(self, port, q):
-        channel = grpc.insecure_channel(
-            'localhost:{}'.format(port))
-        stub = Branch_pb2_grpc.BranchStub(channel)
-        self.stub = stub
-        self.executeEvents(q)
 
 
 def create_customer(port, cid, events, q):
@@ -67,17 +67,20 @@ def output(q):
 
 
 if __name__ == "__main__":
+    # taking input file, converting smart quotes
     with open(sys.argv[1]) as f:
         invalid_json = f.read()
     mid_json = invalid_json.replace('“', '"').replace('”', '"')
     valid_json = json.loads(mid_json)
 
+    # build a list of branch IDs
     branches = []
     for request in valid_json:
         for attribute, value in request.items():
             if value == "branch":
                 branches.append(request['id'])
 
+    # create Branch processes, send to server function
     for request in valid_json:
         for attribute, value in request.items():
             if value == "branch":
@@ -87,6 +90,7 @@ if __name__ == "__main__":
                     target=Branch.serve, args=(port, bid, balance, branchlist))
                 worker.start()
 
+    # create Customer processes, send to create_customer function
     time.sleep(.25)
     q = multiprocessing.Queue()
     workers = []
@@ -104,4 +108,5 @@ if __name__ == "__main__":
     for worker in workers:
         worker.join()
 
+    # call output after all workers are done
     output(q)
