@@ -2,10 +2,6 @@ import grpc
 import Branch_pb2
 import Branch_pb2_grpc
 from concurrent import futures
-import sys
-import json
-import time
-import multiprocessing
 
 
 class Branch(Branch_pb2_grpc.BranchServicer):
@@ -25,31 +21,26 @@ class Branch(Branch_pb2_grpc.BranchServicer):
 
     def MsgDelivery(self, request, context):
         amount = request.money
-        rtype = request.type
-        if request.eventiface == 'deposit':
-            self.balance = self.deposit(amount, rtype)
-            return Branch_pb2.Response(id=request.id, interface="deposit", result="success")
-        elif request.eventiface == 'withdraw':
-            self.balance = self.withdraw(amount, rtype)
-            return Branch_pb2.Response(id=request.id, interface="withdraw", result="success")
+        request_type = request.type
+        transaction_type = request.eventiface
+
+        if request.eventiface == 'deposit' or request.eventiface == 'withdraw':
+            self.balance = self.adjust_balance(
+                amount, request_type, transaction_type)
+            return Branch_pb2.Response(id=request.id, interface=transaction_type, result="success")
         else:
             return Branch_pb2.Response(id=request.id, interface="query", result="success", money=self.balance)
 
-    def deposit(self, amount, rtype):
-        newbalance = self.balance + amount
-        # only propagate if first request - type will be customer
-        if rtype == 'customer':
-            self.prop_dp(amount)
-        return newbalance
+    def adjust_balance(self, amount, req_type, trans_type):
+        if trans_type == 'deposit':
+            new_bal = self.balance + amount
+        else:
+            new_bal = self.balance - amount
+        if req_type == 'customer':
+            self.propagate(amount, trans_type)
+        return new_bal
 
-    def withdraw(self, amount, rtype):
-        newbalance = self.balance - amount
-        # only propagate if first request - type will be customer
-        if rtype == 'customer':
-            self.prop_wd(amount)
-        return newbalance
-
-    def prop_dp(self, amount):
+    def propagate(self, amount, trans_type):
         for i in self.branches:
             if i != self.id:
                 port = 50050 + i
@@ -57,18 +48,7 @@ class Branch(Branch_pb2_grpc.BranchServicer):
                     'localhost:{}'.format(port))
                 stub = Branch_pb2_grpc.BranchStub(channel)
                 request = Branch_pb2.Request(
-                    id=i, type='branch', eventid=0, eventiface="deposit", money=amount)
-                response = stub.MsgDelivery(request)
-
-    def prop_wd(self, amount):
-        for i in self.branches:
-            if i != self.id:
-                port = 50050 + i
-                channel = grpc.insecure_channel(
-                    'localhost:{}'.format(port))
-                stub = Branch_pb2_grpc.BranchStub(channel)
-                request = Branch_pb2.Request(
-                    id=i, type='branch', eventid=0, eventiface="withdraw", money=amount)
+                    id=i, type='branch', eventid=0, eventiface=trans_type, money=amount)
                 response = stub.MsgDelivery(request)
 
 

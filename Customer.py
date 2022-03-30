@@ -31,9 +31,9 @@ class Customer:
     def executeEvents(self, q):
         eventid, eventiface, money = self.events['id'], self.events['interface'], self.events['money']
         if eventiface == 'query':
-            time.sleep(3)
-        elif eventiface == 'withdraw':
             time.sleep(1)
+        elif eventiface == 'withdraw':
+            time.sleep(.5)
         request = Branch_pb2.Request(
             id=self.id, type='customer', eventid=eventid, eventiface=eventiface, money=money)
         response = self.stub.MsgDelivery(request)
