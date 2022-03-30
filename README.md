@@ -8,7 +8,7 @@ The gRPC Distributed Banking System demonstrates the use of Remote Procedure Cal
 
 `Branch.py` represents banking branches which are servers running on their own distinct ports, awaiting transaction requests. When a request for deposit or withdraw is received, the server handling the request will update its own balance and propagate the change to all other branches, who will then update their own balances. Then, the gRPC response is sent back to the Customer instance. If the request is a query, the shared balance is returned immediately.
 
-`Customer.py` handles the input JSON file, and parses it to create multiprocessor Customer instances and their transactions. It configures a gRPC stub with the port of the waiting server, and then sends the customer requests to the appropriate branch. Once a response is received, it is placed in a multiprocessing queue until all workers have resolved their tasks, and the responses are formatted to an output file. If the transactions and propagations are handled successfully, the balance in the output file should match for every customer.
+`Customer.py` handles the input JSON file, and parses it to create multiprocessor Customer instances and their transactions. It also dynamically creates a branch corresponding to each unique customer ID in the input. A gRPC stub is configured with the port of the waiting server, and then the customer requests is sent to the appropriate branch. Once a response from the branch is received, the response is placed in a multiprocessing queue until all workers have resolved their tasks, and then the responses are formatted to an output .txt file. If the transactions and propagations are handled successfully, the balance in the output file should match for every customer.
 
 ## To Run:
 
