@@ -1,6 +1,6 @@
 import grpc
-import Branch_pb2
-import Branch_pb2_grpc
+import generated.Branch_pb2 as Branch_pb2
+import generated.Branch_pb2_grpc as Branch_pb2_grpc
 import time
 import sys
 import json
